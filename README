@@ -1,0 +1,33 @@
+Ecstatic
+
+Static analysis for Go.
+
+TODO:
+Obvious nil pointer dereference
+Obvious unintialised values
+ignored errors or unchecked errors.
+	- _'ing error
+	- not checking the err value before using the other values
+
+index out of range
+	- make()
+	- literal
+	- append()
+
+Suspicious condition(use of & where might supposed to be && or condition always true,false)
+Suspicious loop(repeated loop variable in inner loop etc.)
+	- using key variable not as an index in loop where key type == value type
+Suspicious shaddowing(shadowing in a function)
+
+Suspicious use of read interface
+	- checking err before n
+
+Divide by zero
+
+Unused function args or return values
+Unused functions
+Panic Escapes Package(public methods or function panic)
+Method calls os.Exit() or log.Fatal() etc.
+Closer doesn't escape and didn't closed
+Methods that panic
+
