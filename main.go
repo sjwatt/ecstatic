@@ -6,42 +6,58 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 )
 
 // Conversion between ast.Visitor and the simpler type func(ast.Node) (bool).
 type SimpleVisitor struct {
-	visitFunc func(node ast.Node) bool
+	pack *ast.Package
+	fset *token.FileSet
 }
 
 // Returns itself if 'visitFunc' returns true - otherwise returns nil.
 func (v SimpleVisitor) Visit(node ast.Node) ast.Visitor {
-	if v.visitFunc(node) {
-		return v
-	}
-	return nil
+		switch a := node.(type) {
+		case *ast.ExprStmt:
+			//fmt.Printf("%#v\n",a.X.(*ast.CallExpr).Fun.(*ast.SelectorExpr).X)
+			switch b := a.X.(*ast.CallExpr).Fun.(type){
+			case *ast.Ident:
+				ident:=v.pack.Scope.Lookup(b.Name)
+				//fmt.Printf("%#v", ident)
+				if ident != nil && ident.Decl.(*ast.FuncDecl).Type.Results != nil{
+					fmt.Println(ident.Name," has unassigned return values",v.fset.Position(ident.Pos()))
+				}
+			case *ast.SelectorExpr:
+				X := a.X.(*ast.CallExpr).Fun.(*ast.SelectorExpr).X.(*ast.Ident).Name
+				I := a.X.(*ast.CallExpr).Fun.(*ast.SelectorExpr).Sel.Name
+				//fmt.Println(X+"."+I)
+				f := v.pack.Imports[X].Data.(*ast.Scope).Lookup(I)
+				//fmt.Printf("%#v\n",v.pack.Scope.Objects)
+				//fmt.Printf("%#v\n",f)
+				if f != nil && f.Type.(*types.Func).Results != nil{
+					fmt.Println(X+"."+I," has unassigned return values",v.fset.Position(a.Pos()))
+				}
+			}
+		}
+		return v		
 }
-
-func visitor(visit func(node ast.Node) bool) ast.Visitor {
-	return SimpleVisitor{visit}
-}
-
 func main() {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "./testdata/test.go", nil, 0)
-	if err != nil {
-		panic("parse file:" + err.Error())
-	}
+	files := map[string]*ast.File{}
 
-	pack, err := ast.NewPackage(fset, map[string]*ast.File{"./testdata/test.go": file}, types.GcImporter, types.Universe)
+	for _,f := range os.Args[1:] {
+		file, err := parser.ParseFile(fset, f, nil, 0)
+		if err != nil {
+			panic("parse file:" + err.Error())
+		}
+		files[f] = file
+		
+	}
+	pack, err := ast.NewPackage(fset, files, types.GcImporter, types.Universe)
 	if err != nil {
 		panic("new package" + err.Error())
 	}
-	// validate the parse
-	//fmt.Println("name:",pack.Name)
-	//fmt.Println("println:",pack.Scope.Lookup("Println").Name)
-	//fmt.Println("println:",pack.Scope.Lookup("Println").Type)
-	//fmt.Printf("%#v\n",pack.Scope.Lookup("Println").Decl.(*ast.FuncDecl).Type.Results.List[0].Type.(*ast.Ident))
-	for name, object := range pack.Scope.Objects {
+	/*for name, object := range pack.Scope.Objects {
 		if f, ok := object.Decl.(*ast.FuncDecl); ok {
 			if f.Type.Results == nil {
 				continue
@@ -52,13 +68,10 @@ func main() {
 				}
 			}
 		}
-	}
-
-	fmt.Println("imports:", pack.Imports)
-	_ = pack
+	}*/
 
 	//check that the file is valid
-	valid := true
+	/*valid := true
 	ast.Walk(visitor(func(node ast.Node) bool {
 		switch node.(type) {
 		case *ast.BadDecl,
@@ -71,45 +84,9 @@ func main() {
 	}), pack)
 	if !valid {
 		panic("invalid file")
-	}
+	}*/
 
-	//fmt.Printf("%#v\n",call.X.(*ast.CallExpr).Fun)
-	//fmt.Printf("%#v\n",call.Rhs[0].(*ast.CallExpr).Fun.(*ast.Ident).Name)
-
-	ast.Walk(visitor(func(node ast.Node) bool {
-		switch a := node.(type) {
-		case *ast.ExprStmt:
-			fmt.Printf("%#v\n",a.X.(*ast.CallExpr).Fun)
-		case *ast.AssignStmt:
-			if call,ok := a.Rhs[0].(*ast.CallExpr); ok {
-				if selector, ok := call.Fun.(*ast.SelectorExpr); ok {
-					_ = selector
-					//handle selector	
-				} else {
-					fmt.Printf("%#v\n",call.Fun.(*ast.Ident).Name)
-				}
-			}
-		case *ast.GoStmt:
-			fmt.Printf("%#v\n", a)
-		case *ast.ForStmt:
-			fmt.Printf("%#v\n", a)
-		case *ast.DeferStmt:
-			fmt.Printf("%#v\n", a)
-		case *ast.RangeStmt:
-			fmt.Printf("%#v\n", a)
-		case *ast.ReturnStmt:
-			fmt.Printf("%#v\n", a)
-		}
-		return true
-	}), pack)
-
-	//fmt.Println("fset:",fset)
-	//fmt.Println("packages:",packages["main"])
-	//m, err := types.Check(fset, packages["main"])
-	//if err != nil {
-	//	panic(err)
-	//}
-	//fmt.Println(m)
+	ast.Walk(SimpleVisitor{pack,fset},pack)
 }
 
 /*

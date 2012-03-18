@@ -3,12 +3,22 @@ package main
 import "fmt"
 
 func main(){
-	Println("pizza")
-	_= Println("pizza")
-	_,_=fmt.Println("pies")
+	PrintPie("pizza")
+	_= PrintPizza("pizza")
+//	_,_=fmt.Println("pies")
+//	println("pizza")
+	DoesNotReturnAnything()
 }
 
-func Println(a string)error{
-	println(a)
+func PrintPie(a string)error{
+	//fmt.Println(a)
 	return nil
+}
+
+func PrintPizza(a string)error{
+	//fmt.Println(a)
+	return nil
+}
+
+func DoesNotReturnAnything(){
 }

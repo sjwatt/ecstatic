@@ -8,6 +8,7 @@ Obvious unintialised values
 ignored errors or unchecked errors.
 	- _'ing error
 	- not checking the err value before using the other values
+ignoring return values
 
 index out of range
 	- make()
@@ -30,4 +31,8 @@ Panic Escapes Package(public methods or function panic)
 Method calls os.Exit() or log.Fatal() etc.
 Closer doesn't escape and didn't closed
 Methods that panic
+Identical source code branches
+Duplicate lines
+append() assignment to 
+regexp must compile
 
